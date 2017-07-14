@@ -6,6 +6,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"golang.org/x/net/idna"
 )
 
 const (
@@ -18,14 +20,33 @@ func GetWhois(domain string) (string, error) {
 	return GetWhoisTimeout(domain, time.Second*5)
 }
 
-func GetWhoisTimeout(domain string, timeout time.Duration) (result string, err error) {
-	s, e := GetPossibleWhoisServers(domain, timeout)
-	if e != nil {
-		err = e
-		return
+func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
+	domainUnicode, errUni := idna.ToASCII(domain)
+	if errUni != nil {
+		return "", errUni
 	}
-	result = strings.Join(s, ",")
-	return
+	servers, errPos := GetPossibleWhoisServers(domainUnicode, timeout)
+	if errPos != nil {
+		return "", errPos
+	}
+
+	var res string
+	var err error
+	for _, server := range servers {
+		res, err = GetWhoisData(domainUnicode, server, timeout)
+		if CorrectWhoisInfo(res) {
+			fmt.Printf("Correct whois server: %v\n", server)
+			break
+		}
+		res = ""
+		// errorAnswer := regexp.MustCompile(`(?i)(Not found|No match for|No entries found)`)
+		// if len(errorAnswer.FindStringSubmatch(res)) == 0 {
+		// 	fmt.Printf("Correct whois server: %v\n", server)
+		// 	break
+		// }
+	}
+
+	return res, err
 }
 
 func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers []string, err error) {
@@ -52,6 +73,7 @@ func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers
 		whoisServers = append(whoisServers, whoisFromIANA)
 	}
 
+	fmt.Printf("%v possible whois server: %v\n", domain, strings.Join(whoisServers, ", "))
 	return
 }
 
