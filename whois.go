@@ -3,6 +3,7 @@ package whois
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"strings"
 	"time"
@@ -21,21 +22,28 @@ func GetWhois(domain string) (string, error) {
 }
 
 func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
-	domainUnicode, errUni := idna.ToASCII(domain)
-	if errUni != nil {
-		return "", errUni
+	log.Printf("Analize domain: %v\n", domain)
+
+	if !strings.Contains(domain, ".") {
+		return "", fmt.Errorf("domain (%v) name is wrong", domain)
 	}
+
+	domainUnicode, err := idna.ToASCII(domain)
+	if err != nil {
+		return "", err
+	}
+	log.Printf("Convert domain to ASCII: %v\n", domainUnicode)
+
 	servers, errPos := GetPossibleWhoisServers(domainUnicode, timeout)
 	if errPos != nil {
 		return "", errPos
 	}
 
 	var res string
-	var err error
 	for _, server := range servers {
 		res, err = GetWhoisData(domainUnicode, server, timeout)
 		if CorrectWhoisInfo(res) {
-			fmt.Printf("Correct whois server: %v\n", server)
+			log.Printf("Correct whois server: %v\n", server)
 			break
 		}
 		res = ""
@@ -52,10 +60,6 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers []string, err error) {
 	parts := strings.Split(domain, ".")
 	lenDomain := len(parts)
-	if lenDomain < 2 {
-		err = fmt.Errorf("Domain(%s) name is wrong!", domain)
-		return
-	}
 
 	topLevelDomain := parts[lenDomain-1]
 	if lenDomain > 2 {
@@ -73,7 +77,7 @@ func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers
 		whoisServers = append(whoisServers, whoisFromIANA)
 	}
 
-	fmt.Printf("%v possible whois server: %v\n", domain, strings.Join(whoisServers, ", "))
+	log.Printf("possible whois server: %v\n", strings.Join(whoisServers, ", "))
 	return
 }
 
@@ -86,28 +90,17 @@ func GetWhoisServerFromIANA(zone string, timeout time.Duration) string {
 	return result
 }
 
-func GetWhoisData(domain, server string, timeout time.Duration) (data string, err error) {
-	var (
-		connection net.Conn
-		buffer     []byte
-	)
-
-	connection, err = net.DialTimeout("tcp", net.JoinHostPort(server, "43"), timeout)
-
+func GetWhoisData(domain, server string, timeout time.Duration) (string, error) {
+	connection, err := net.DialTimeout("tcp", net.JoinHostPort(server, "43"), timeout)
 	if err != nil {
-		return
+		return "", err
 	}
-
 	defer connection.Close()
 
 	connection.Write([]byte(domain + "\r\n"))
-
-	buffer, err = ioutil.ReadAll(connection)
-
+	buffer, err := ioutil.ReadAll(connection)
 	if err != nil {
-		return
+		return "", err
 	}
-
-	data = string(buffer[:])
-	return
+	return string(buffer[:]), nil
 }
