@@ -18,16 +18,16 @@ func parser(re *regexp.Regexp, group int, data string) (result []string) {
 }
 
 func ParseWhoisServer(whois string) string {
-	return parser(regexp.MustCompile(`(?i)whois:\s+(.*?)(\s|$)`), 1, whois)[0]
+	return parser(regexp.MustCompile(`(?i)(whois):\s+(.*?)(\s|$)`), 2, whois)[0]
 }
 
 func ParseReferServer(whois string) string {
-	return parser(regexp.MustCompile(`(?i)refer:\s+(.*?)(\s|$)`), 1, whois)[0]
+	return parser(regexp.MustCompile(`(?i)(refer):\s+(.*?)(\s|$)`), 2, whois)[0]
 }
 
 //Parse uniq name servers from whois
 func ParseNameServers(whois string) []string {
-	return parser(regexp.MustCompile(`(?i)(Name )?(n)?Server:\s+(.*?)(\s|$)`), 3, whois)
+	return parser(regexp.MustCompile(`(?i)(Name Server|nserver):\s+(.*?)(\s|$)`), 2, whois)
 }
 
 //Parse uniq domain status(codes) from whois
@@ -39,7 +39,7 @@ func CorrectWhoisInfo(whois string) bool {
 	if len(whois) == 0 {
 		return false
 	}
-	hasDomain := parser(regexp.MustCompile(`(?i)(Domain)?( Name)?:\s+(.*?)(\s|$)`), 1, whois)
+	hasDomain := parser(regexp.MustCompile(`(?i)(Domain Name|domain):\s+(.*?)(\s|$)`), 2, whois)
 	return len(hasDomain) > 0
 }
 
