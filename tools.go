@@ -32,7 +32,7 @@ func ParseNameServers(whois string) []string {
 
 //Parse uniq domain status(codes) from whois
 func ParseDomainStatus(whois string) []string {
-	return parser(regexp.MustCompile(`(?i)(Domain )?(Status|state):\s+(.*?)(\s|$)`), 2, whois)
+	return parser(regexp.MustCompile(`(?i)(Domain )?(Status|state):\s+(.*?)(\s|$)`), 3, whois)
 }
 
 func IsWhoisDataCorrect(whois string) bool {
