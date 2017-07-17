@@ -35,7 +35,7 @@ func ParseDomainStatus(whois string) []string {
 	return parser(regexp.MustCompile(`(?i)(Domain )?(Status|state):\s+(.*?)(\s|$)`), 2, whois)
 }
 
-func CorrectWhoisInfo(whois string) bool {
+func IsWhoisDataCorrect(whois string) bool {
 	if len(whois) == 0 {
 		return false
 	}

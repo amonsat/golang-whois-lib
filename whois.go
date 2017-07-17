@@ -52,7 +52,7 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 	var res string
 	for _, server := range servers {
 		res, err = GetWhoisData(domainUnicode, server.domain, timeout)
-		if CorrectWhoisInfo(res) {
+		if IsWhoisDataCorrect(res) {
 			CacheWhois[server.zone] = server.domain
 			log.Printf("Correct whois server: %v\n", server)
 			break
