@@ -58,7 +58,7 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 			if server.domain != brandWhoisServer {
 				CacheWhois[server.zone] = server.domain
 			}
-			log.Printf("Correct whois server: %v\n", server)
+			log.Printf("Correct whois server: %v\n", server.domain)
 			break
 		}
 		res = ""
@@ -67,6 +67,9 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 		// 	fmt.Printf("Correct whois server: %v\n", server)
 		// 	break
 		// }
+	}
+	if res == "" {
+		err = fmt.Errorf("Error: Not found any whois servers")
 	}
 
 	return res, err
