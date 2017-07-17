@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	ZoneWhoisServer   = "whois.iana.org"
+	zoneWhoisServer   = "whois.iana.org"
 	defaulWhoisServer = "whois.arin.net"
 	aliasWhoisServer  = ".whois-servers.net"
+	brandWhoisServer  = "whois.markmonitor.com"
 )
 
 var (
@@ -43,6 +44,7 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 		return "", err
 	}
 	log.Printf("Convert domain to ASCII: %v\n", domainUnicode)
+	domainUnicode = strings.ToLower(domainUnicode)
 
 	servers, errPos := GetPossibleWhoisServers(domainUnicode, timeout)
 	if errPos != nil {
@@ -53,7 +55,9 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 	for _, server := range servers {
 		res, err = GetWhoisData(domainUnicode, server.domain, timeout)
 		if IsWhoisDataCorrect(res) {
-			CacheWhois[server.zone] = server.domain
+			if server.domain != brandWhoisServer {
+				CacheWhois[server.zone] = server.domain
+			}
 			log.Printf("Correct whois server: %v\n", server)
 			break
 		}
@@ -91,6 +95,10 @@ func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers
 	whoisServers = append(whoisServers, &server{defaulWhoisServer, topLevelDomain})
 	whoisServers = append(whoisServers, &server{topLevelDomain + aliasWhoisServer, topLevelDomain})
 
+	if strings.Contains("com net edu", topLevelDomain) {
+		whoisServers = append(whoisServers, &server{brandWhoisServer, topLevelDomain})
+	}
+
 	if val, ok := CacheIANA[topLevelDomain]; ok {
 		whoisServers = append(whoisServers, &server{val, topLevelDomain})
 	} else if whoisFromIANA := GetWhoisServerFromIANA(topLevelDomain, timeout); whoisFromIANA != "" {
@@ -103,7 +111,7 @@ func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers
 }
 
 func GetWhoisServerFromIANA(zone string, timeout time.Duration) string {
-	data, err := GetWhoisData(zone, ZoneWhoisServer, timeout)
+	data, err := GetWhoisData(zone, zoneWhoisServer, timeout)
 	if err != nil {
 		return ""
 	}
