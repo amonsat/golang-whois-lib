@@ -94,7 +94,7 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 			log.Printf("Correct whois server: %v\n", server.domain)
 			break
 		} else if ParseNofound(res) {
-			err = fmt.Errorf("Not found")
+			return "", nil
 		}
 	}
 
