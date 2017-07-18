@@ -91,9 +91,10 @@ func TestGetWhoisServerFromIANA(t *testing.T) {
 
 func TestGetWhoisData(t *testing.T) {
 	type args struct {
-		domain  string
-		server  string
-		timeout time.Duration
+		domain   string
+		server   string
+		template string
+		timeout  time.Duration
 	}
 	tests := []struct {
 		name    string
@@ -101,13 +102,13 @@ func TestGetWhoisData(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{"whois data", args{"google.com", "whois.markmonitor.com", 5 * time.Second}, "Domain Name: google.com", false},
-		{"whois data", args{"webo.jp", "whois.jprs.jp", 5 * time.Second}, "[ JPRS database provides", false},
-		{"whois data", args{"asgard.de", "whois.denic.de", 5 * time.Second}, "Domain: asgard.de", false},
+		{"whois data", args{"google.com", "whois.markmonitor.com", "%s\r\n", 5 * time.Second}, "Domain Name: google.com", false},
+		{"whois data", args{"webo.jp", "whois.jprs.jp", "%s\r\n", 5 * time.Second}, "[ JPRS database provides", false},
+		{"whois data", args{"asgard.de", "whois.denic.de", "-T dn,ace %s\r\n", 5 * time.Second}, "% Copyright (c) 2010 by DENIC", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetWhoisData(tt.args.domain, tt.args.server, tt.args.timeout)
+			got, err := GetWhoisData(tt.args.domain, tt.args.server, tt.args.template, tt.args.timeout)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetWhoisData() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -49,6 +49,10 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 		return "", fmt.Errorf("domain (%v) name is wrong", domain)
 	}
 
+	if net.ParseIP(domain) != nil {
+		return "", fmt.Errorf("domain (%v) is IP", domain)
+	}
+
 	domainUnicode, err := idna.ToASCII(domain)
 	if err != nil {
 		return "", err
