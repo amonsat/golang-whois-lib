@@ -18,7 +18,12 @@ func parser(re *regexp.Regexp, group int, data string) (result []string) {
 }
 
 func ParseWhoisServer(whois string) string {
-	return parser(regexp.MustCompile(`(?i)(whois):\s+(.*?)(\s|$)`), 2, whois)[0]
+	data := parser(regexp.MustCompile(`(?i)(Whois server|whois):\s+(.*?)(\s|$)`), 2, whois)
+	res := ""
+	if len(data) > 0 {
+		res = data[0]
+	}
+	return res
 }
 
 func ParseReferServer(whois string) string {

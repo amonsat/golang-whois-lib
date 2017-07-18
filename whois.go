@@ -23,6 +23,16 @@ var (
 	CacheWhois = make(map[string]string)
 )
 
+var whoisServerTemplate = map[string]string{
+	"base":                   "%s\r\n",
+	"whois.nic.de":           "-T dn,ace %s\r\n",
+	"whois.denic.de":         "-T dn,ace %s\r\n",
+	"whois.nic.name":         "domain = %s\r\n",
+	"whois.dk-hostmaster.dk": "--show-handles %s\r\n",
+	"whois.verisign-grs.com": "domain %s\r\n",
+	"verisign-group":         "domain %s\r\n",
+}
+
 type server struct {
 	domain string
 	zone   string
@@ -53,7 +63,35 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 
 	var res string
 	for _, server := range servers {
-		res, err = GetWhoisData(domainUnicode, server.domain, timeout)
+
+		template := whoisServerTemplate["base"]
+		if val, ok := whoisServerTemplate[server.domain]; ok {
+			template = val
+		}
+
+		res, err = GetWhoisData(domainUnicode, server.domain, template, timeout)
+
+		if res != "" {
+			if isVerisignGroup(res) {
+				res, err = GetWhoisData(domainUnicode, server.domain, whoisServerTemplate["verisign-group"], timeout)
+				if err != nil {
+					return "", err
+				}
+			}
+
+			if refWhoisServer, ok := hasRefferWhoisServer(res); ok {
+				template := whoisServerTemplate["base"]
+				if val, ok := whoisServerTemplate[server.domain]; ok {
+					template = val
+				}
+
+				res, err = GetWhoisData(domainUnicode, refWhoisServer, template, timeout)
+				if err != nil {
+					return "", err
+				}
+			}
+		}
+
 		if IsWhoisDataCorrect(res) {
 			if server.domain != brandWhoisServer {
 				CacheWhois[server.zone] = server.domain
@@ -114,7 +152,7 @@ func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers
 }
 
 func GetWhoisServerFromIANA(zone string, timeout time.Duration) string {
-	data, err := GetWhoisData(zone, zoneWhoisServer, timeout)
+	data, err := GetWhoisData(zone, zoneWhoisServer, whoisServerTemplate["base"], timeout)
 	if err != nil {
 		return ""
 	}
@@ -122,17 +160,34 @@ func GetWhoisServerFromIANA(zone string, timeout time.Duration) string {
 	return result
 }
 
-func GetWhoisData(domain, server string, timeout time.Duration) (string, error) {
+func GetWhoisData(domain, server, template string, timeout time.Duration) (string, error) {
 	connection, err := net.DialTimeout("tcp", net.JoinHostPort(server, "43"), timeout)
 	if err != nil {
 		return "", err
 	}
 	defer connection.Close()
 
-	connection.Write([]byte(domain + "\r\n"))
+	connection.Write([]byte(fmt.Sprintf(template, domain)))
 	buffer, err := ioutil.ReadAll(connection)
 	if err != nil {
 		return "", err
 	}
-	return string(buffer[:]), nil
+	result := string(buffer[:])
+
+	return result, nil
+}
+
+func isVerisignGroup(data string) bool {
+	veriSignGroupTemplate1 := `To single out one record, look it up with "xxx"`
+	veriSignGroupTemplate2 := `look them up with "=xxx" to receive a full display`
+
+	return strings.Contains(data, veriSignGroupTemplate1) && strings.Contains(data, veriSignGroupTemplate2)
+}
+
+func hasRefferWhoisServer(whoisString string) (string, bool) {
+	data := ParseWhoisServer(whoisString)
+	if len(data) > 0 {
+		return data, true
+	}
+	return "", false
 }
