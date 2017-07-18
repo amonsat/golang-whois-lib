@@ -18,7 +18,7 @@ func parser(re *regexp.Regexp, group int, data string) (result []string) {
 }
 
 func ParseWhoisServer(whois string) string {
-	data := parser(regexp.MustCompile(`(?i)(Whois server|whois):\s+(.*?)(\s|$)`), 2, whois)
+	data := parser(regexp.MustCompile(`(?m:^)(\s+)?(?i)(Whois server|whois):\s+(.*?)(\s|$)`), 3, whois)
 	res := ""
 	if len(data) > 0 {
 		res = data[0]
@@ -48,6 +48,14 @@ func IsWhoisDataCorrect(whois string) bool {
 	return len(hasDomain) > 0
 }
 
+func ParseNofound(whois string) bool {
+	data := parser(regexp.MustCompile(`(?i)(Not found|No match for|No entries found)(\s|$)`), 1, whois)
+	if len(data) > 0 {
+		return true
+	}
+	return false
+}
+
 func appendIfMissing(slice []string, i string) []string {
 	i = strings.ToLower(i)
 
@@ -57,4 +65,18 @@ func appendIfMissing(slice []string, i string) []string {
 		}
 	}
 	return append(slice, i)
+}
+
+func whoisWeight(whois string) (res int) {
+	res += len(parser(regexp.MustCompile(`(?i)(address)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(phone)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(e-mail)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(Admin)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(Tech)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(Registrant)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(person)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(PostalCode)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(CountryCode)(\s|$)`), 1, whois))
+	res += len(parser(regexp.MustCompile(`(?i)(Fax)(\s|$)`), 1, whois))
+	return
 }

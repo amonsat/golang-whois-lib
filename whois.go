@@ -74,40 +74,28 @@ func GetWhoisTimeout(domain string, timeout time.Duration) (string, error) {
 		if res != "" {
 			if isVerisignGroup(res) {
 				res, err = GetWhoisData(domainUnicode, server.domain, whoisServerTemplate["verisign-group"], timeout)
-				if err != nil {
-					return "", err
-				}
 			}
 
 			if refWhoisServer, ok := hasRefferWhoisServer(res); ok {
 				template := whoisServerTemplate["base"]
-				if val, ok := whoisServerTemplate[server.domain]; ok {
+				if val, ok := whoisServerTemplate[refWhoisServer]; ok {
 					template = val
 				}
 
-				res, err = GetWhoisData(domainUnicode, refWhoisServer, template, timeout)
-				if err != nil {
-					return "", err
+				refRes, _ := GetWhoisData(domainUnicode, refWhoisServer, template, timeout)
+				if whoisWeight(refRes) > whoisWeight(res) {
+					res = refRes
 				}
 			}
 		}
 
 		if IsWhoisDataCorrect(res) {
-			if server.domain != brandWhoisServer {
-				CacheWhois[server.zone] = server.domain
-			}
+			CacheWhois[server.zone] = server.domain
 			log.Printf("Correct whois server: %v\n", server.domain)
 			break
+		} else if ParseNofound(res) {
+			err = fmt.Errorf("Not found")
 		}
-		res = ""
-		// errorAnswer := regexp.MustCompile(`(?i)(Not found|No match for|No entries found)`)
-		// if len(errorAnswer.FindStringSubmatch(res)) == 0 {
-		// 	fmt.Printf("Correct whois server: %v\n", server)
-		// 	break
-		// }
-	}
-	if res == "" {
-		err = fmt.Errorf("Error: Not found any whois servers")
 	}
 
 	return res, err
@@ -136,10 +124,6 @@ func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers
 	whoisServers = append(whoisServers, &server{defaulWhoisServer, topLevelDomain})
 	whoisServers = append(whoisServers, &server{topLevelDomain + aliasWhoisServer, topLevelDomain})
 
-	if strings.Contains("com net edu", topLevelDomain) {
-		whoisServers = append(whoisServers, &server{brandWhoisServer, topLevelDomain})
-	}
-
 	if val, ok := CacheIANA[topLevelDomain]; ok {
 		whoisServers = append(whoisServers, &server{val, topLevelDomain})
 	} else if whoisFromIANA := GetWhoisServerFromIANA(topLevelDomain, timeout); whoisFromIANA != "" {
@@ -147,7 +131,6 @@ func GetPossibleWhoisServers(domain string, timeout time.Duration) (whoisServers
 		CacheIANA[topLevelDomain] = whoisFromIANA
 	}
 
-	// log.Printf("possible whois server: %v\n", strings.Join(whoisServers, ", "))
 	return
 }
 
