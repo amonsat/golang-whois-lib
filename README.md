@@ -1,6 +1,6 @@
 # golang-whois-lib
 
-golang-whois-lib is light golang module for checking domain's whois without using hardcoded domain zones. 
+golang-whois-lib is light golang module for checking domain's whois without using hardcoded domain zones. Lib searching whois info also on reffered servers. And caching result for every zones into map.
 
 ## Installation
 
