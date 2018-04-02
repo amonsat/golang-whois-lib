@@ -154,6 +154,10 @@ func GetWhoisData(domain, server, template string, timeout time.Duration) (strin
 	}
 	defer connection.Close()
 
+	err = connection.SetDeadline(time.Now().Add(timeout))
+	if err != nil {
+		return "", err
+	}
 	connection.Write([]byte(fmt.Sprintf(template, domain)))
 	buffer, err := ioutil.ReadAll(connection)
 	if err != nil {
